@@ -29,58 +29,68 @@ class SkinNet(nn.Module):
         x = self.conv2(x)
         x = self.conv3(x)
         x = self.conv4(x)
-        x = torch.flatten(x)
+        x = x.reshape(x.size(0), -1)
         x = self.fc1(x)
         x = self.fc2(x)
         x = self.fc3(x)
-        return x.unsqueeze(0)
+        return x
 def geterror(vector, targetclass):
-    output, indices = vector.max(1) 
-    if targetclass == indices:
-        return 0
-    else:
-        return 1 
+    output, i = vector.max(1)
+    wrong = (i != targetclass).sum().item()
+    return wrong 
 def train(loader):
-    numepoch = 5
+    numepoch = 200 
     model = SkinNet().to(device)
     wandb.watch(model)
     criterion = nn.CrossEntropyLoss() 
-    optimizer = torch.optim.Adam(model.parameters(), weight_decay = 0.01)
+    optimizer = torch.optim.AdamW(model.parameters())
     model.train()
     for i in range(numepoch):
-        losslist = []
-        errorlist = []
+        count = 0
+        numdata = 0
+        error = 0
+        lossvar = 0
         for x, y in loader:
+            numdata += len(y)
             x = x.to(device)
             y = y.to(device)
-            y_pred = model(x)
             optimizer.zero_grad()
+            y_pred = model(x)
             loss = criterion(y_pred, y) 
             loss.backward()
             optimizer.step()
-            losslist.append(loss.item())
-            errorlist.append(geterror(y_pred, y))
-            count += 1
-        trainloss = sum(losslist) / len(losslist)
-        trainerror = sum(errorlist) /len(errorlist)
-        wandb.log({"Epoch": i, "Training Loss": trainloss, "Training Error": trainerror}) 
-        print("Epoch: " + str(i) + " Training Loss: " +str(trainloss) + " Training Error" + str(trainerror))
+            lossvar += loss.item() 
+            error += geterror(y_pred,y)
+            count +=1
+            if count == 200:
+                count = 0
+                wandb.log({"Training Loss per 10k": loss.item(), 
+                           "Training Error per 10k": (error/numdata)}) 
+        trainloss = lossvar / numdata 
+        trainerror = error / numdata
+        wandb.log({"Epoch": i, "Training Loss": trainloss, 
+                   "Training Error": trainerror}) 
+        print("Epoch: " + str(i) + " Training Loss: " +
+              str(trainloss) + " Training Error: " + str(trainerror))
     torch.save(model.state_dict(), os.path.join(wandb.run.dir, 'model.pt'))
     torch.save(model.state_dict(), "skinmodel.pt")
     return model
 def test(model, loader):
     model.eval() 
-    errorlist = [] 
+    numdata = 0
+    error = 0
+    count = 0
     for x , y in loader:
+        count += 1
         with torch.no_grad():
+            numdata += len(y)
             x = x.to(device)
             y = y.to(device)
             y_pred = model(x) 
-            errorlist.append(geterror(y_pred,y))         
-            count += 1
-    return sum(errorlist) /len(errorlist)
+            error += geterror(y_pred,y)
+    return error / numdata
 if __name__ == "__main__":
-    batchsize = 1
+    batchsize = 10 
     train_loader , test_loader = traintestloader(batchsize)
     model = train(train_loader)
     testerror = test(model, test_loader)

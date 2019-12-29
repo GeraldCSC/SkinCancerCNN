@@ -39,7 +39,7 @@ def traintestloader(batch_size):
     test_data = SkinCancerDataSet(test_name, test_label, 
                                   "/media/gerald/9ae8cbf0-f6c2-4065-8fb2-292211ac9a21/gerald/npytrain")
     train_loader = DataLoader(dataset=train_data, batch_size=batch_size, shuffle = True)
-    test_loader = DataLoader(dataset=test_data, batch_size=1, shuffle = True)
+    test_loader = DataLoader(dataset=test_data, batch_size=batch_size, shuffle = True)
     return train_loader, test_loader
 
 if __name__ == "__main__":
