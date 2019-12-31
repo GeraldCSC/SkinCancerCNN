@@ -21,9 +21,9 @@ class SkinNet(nn.Module):
                                    nn.MaxPool2d(4))
         self.conv4 = nn.Sequential(nn.Conv2d(128,256, 3, stride = 1, padding = 0), nn.ReLU(), 
                                    nn.MaxPool2d(4))
-        self.fc1 = nn.Sequential(nn.Linear(256 * 3 * 3, 100), nn.ReLU())
-        self.fc2 = nn.Sequential(nn.Linear(100,50), nn.ReLU())
-        self.fc3 = nn.Sequential(nn.Linear(50,9), nn.Softmax(dim = 0))
+        self.fc1 = nn.Sequential(nn.Linear(256 * 3 * 3, 200), nn.ReLU())
+        self.fc2 = nn.Sequential(nn.Linear(200,50), nn.ReLU())
+        self.fc3 = nn.Sequential(nn.Linear(50,9), nn.Softmax(dim = 1))
     def forward(self, x):
         x = self.conv1(x)
         x = self.conv2(x)
@@ -39,7 +39,7 @@ def geterror(vector, targetclass):
     wrong = (i != targetclass).sum().item()
     return wrong 
 def train(loader):
-    numepoch = 200 
+    numepoch = 300 
     model = SkinNet().to(device)
     wandb.watch(model)
     criterion = nn.CrossEntropyLoss() 
