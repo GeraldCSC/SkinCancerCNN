@@ -42,7 +42,7 @@ def train(loader):
     numepoch = 300 
     model = SkinNet().to(device)
     wandb.watch(model)
-    criterion = nn.CrossEntropyLoss() 
+    criterion = nn.CrossEntropyLoss(reduction = 'sum') 
     optimizer = torch.optim.AdamW(model.parameters())
     model.train()
     for i in range(numepoch):
