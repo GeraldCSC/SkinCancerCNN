@@ -1,46 +1,19 @@
 import wandb
-import torch.nn as nn
-import torch.nn.functional as F
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from dataset import traintestloader 
 import os
-
+from nn import getmodel
 wandb.init(project="skincancer")
-
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-class SkinNet(nn.Module):
-    def __init__(self):
-        super(SkinNet, self).__init__()
-        self.conv1 = nn.Sequential(nn.Conv2d(3, 32, 3, stride=1, padding = 1),
-                                   nn.ReLU(), nn.MaxPool2d(4))
-        self.conv2 = nn.Sequential(nn.Conv2d(32,64,3, stride = 1, padding = 0), 
-                                   nn.ReLU(), nn.MaxPool2d(4))
-        self.conv3 = nn.Sequential(nn.Conv2d(64,128, 3, stride = 1, padding = 0), nn.ReLU(), 
-                                   nn.MaxPool2d(4))
-        self.conv4 = nn.Sequential(nn.Conv2d(128,256, 3, stride = 1, padding = 0), nn.ReLU(), 
-                                   nn.MaxPool2d(4))
-        self.fc1 = nn.Sequential(nn.Linear(256 * 3 * 3, 200), nn.ReLU())
-        self.fc2 = nn.Sequential(nn.Linear(200,50), nn.ReLU())
-        self.fc3 = nn.Sequential(nn.Linear(50,9), nn.Softmax(dim = 1))
-    def forward(self, x):
-        x = self.conv1(x)
-        x = self.conv2(x)
-        x = self.conv3(x)
-        x = self.conv4(x)
-        x = x.reshape(x.size(0), -1)
-        x = self.fc1(x)
-        x = self.fc2(x)
-        x = self.fc3(x)
-        return x
+
 def geterror(vector, targetclass):
     output, i = vector.max(1)
     wrong = (i != targetclass).sum().item()
     return wrong 
-def train(loader):
+def train(model,loader):
     numepoch = 300 
-    model = SkinNet().to(device)
     wandb.watch(model)
     criterion = nn.CrossEntropyLoss(reduction = 'sum') 
     optimizer = torch.optim.AdamW(model.parameters())
@@ -89,11 +62,11 @@ def test(model, loader):
             y_pred = model(x) 
             error += geterror(y_pred,y)
     return error / numdata
+
 if __name__ == "__main__":
     batchsize = 10 
     train_loader , test_loader = traintestloader(batchsize)
-    model = train(train_loader)
+    model = getmodel().to(device)
+    model = train(model,train_loader)
     testerror = test(model, test_loader)
-    f= open("/home/gerald/Desktop/MelanomaCNN/test_accuracy.txt","a")
-    f.write(str(testerror))
-    f.close()
+    print(testerror)
